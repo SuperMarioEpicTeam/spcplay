@@ -19,25 +19,25 @@ jobs:
           echo "Runner: $RUNNER_OS"
           cmd /c "ver"
 
-      - name: Install FPC (choco → lazarus → winget) using PowerShell
+      - name: Install Lazarus (includes FPC) via Chocolatey, fallback to winget
         shell: pwsh
         run: |
           try {
-            choco install fpc -y -y
-            Write-Host 'Installed fpc via choco'
+            Write-Host 'Attempting: choco install lazarus -y'
+            choco install lazarus -y
+            Write-Host 'choco lazarus finished'
           } catch {
-            Write-Host 'choco fpc failed, trying lazarus'
-            try { choco install lazarus -y -y; Write-Host 'Installed lazarus via choco' } catch { Write-Host 'choco lazarus failed' }
-          }
-          if (-not (Get-Command fpc -ErrorAction SilentlyContinue)) {
-            Write-Host 'FPC not found after choco, trying winget'
+            Write-Host 'choco lazarus failed, trying winget'
             try {
               winget install --accept-source-agreements --accept-package-agreements FreePascal.FreePascal -e
-              Write-Host 'Installed FreePascal via winget'
+              Write-Host 'winget installed FreePascal'
             } catch {
-              Write-Host 'winget install failed or package not found'
+              Write-Host 'winget failed or package not found'
             }
           }
+          Write-Host 'Verifying fpc availability'
+          Get-Command fpc -All | Format-List -Force
+          & cmd /c where fpc || Write-Host 'where fpc returned non-zero'
 
       - name: Verify FPC
         shell: cmd
