@@ -1,0 +1,58 @@
+name: Build spcplay.exe (Windows)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show runner info
+        run: |
+          echo "Runner: $RUNNER_OS"
+          cmd /c "ver"
+
+      - name: Install FPC via Chocolatey
+        shell: cmd
+        run: |
+          choco install fpc -y
+
+      - name: Verify FPC
+        shell: cmd
+        run: |
+          where fpc
+          fpc -v
+
+      - name: Build 32-bit (try)
+        shell: cmd
+        run: |
+          cd spcplay.exe
+          fpc -Twin32 -Pi386 spcplay.dpr -ospcplay.exe || exit /b 0
+
+      - name: If 32-bit failed, build 64-bit
+        shell: cmd
+        run: |
+          cd spcplay.exe
+          if not exist ..\spcplay.exe (
+            fpc -Twin64 -Px86_64 spcplay.dpr -ospcplay.exe || exit /b 1
+          )
+
+      - name: List output
+        shell: cmd
+        run: |
+          dir ..\spcplay.exe || dir spcplay.exe
+
+      - name: Upload spcplay.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spcplay-exe
+          path: |
+            spcplay.exe\spcplay.exe
+            spcplay.exe\spcplay.exe.map
