@@ -19,10 +19,17 @@ jobs:
           echo "Runner: $RUNNER_OS"
           cmd /c "ver"
 
-      - name: Install FPC via Chocolatey
+      - name: Install FPC via Chocolatey (with fallback)
         shell: cmd
         run: |
-          choco install fpc -y
+          choco install fpc -y || choco install lazarus -y || (
+            echo "Chocolatey packages not found, attempting winget..." &
+            winget install --accept-source-agreements --accept-package-agreements FreePascal.FreePascal || (
+              echo "No package manager succeeded - listing choco sources" &
+              choco source list &
+              exit /b 0
+            )
+          )
 
       - name: Verify FPC
         shell: cmd
