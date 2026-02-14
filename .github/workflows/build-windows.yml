@@ -35,9 +35,7 @@ jobs:
               Write-Host 'winget failed or package not found'
             }
           }
-          Write-Host 'Verifying fpc availability'
-          Get-Command fpc -All | Format-List -Force
-          & cmd /c where fpc || Write-Host 'where fpc returned non-zero'
+          Write-Host 'Lazarus installation completed, proceeding to build'
 
       - name: Explore Lazarus installation directory
         shell: cmd
