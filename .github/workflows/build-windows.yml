@@ -39,35 +39,47 @@ jobs:
           Get-Command fpc -All | Format-List -Force
           & cmd /c where fpc || Write-Host 'where fpc returned non-zero'
 
-      - name: Verify FPC
-        shell: cmd
+      - name: Add FPC to PATH and verify
+        shell: pwsh
         run: |
-          where fpc
-          fpc -v
+          $env:PATH = "C:\lazarus\fpc\3.2.2\bin\i386-win32;C:\lazarus\fpc\3.2.2\bin\x86_64-win64;$env:PATH"
+          Write-Host "PATH includes FPC now"
+          & cmd /c where fpc || Write-Host 'fpc not in PATH yet'
+          & fpc -v
 
-      - name: Build 32-bit (try)
+      - name: Build spcplay.exe (32-bit, fallback to 64-bit)
         shell: cmd
         run: |
+          set PATH=C:\lazarus\fpc\3.2.2\bin\i386-win32;C:\lazarus\fpc\3.2.2\bin\x86_64-win64;%PATH%
           cd spcplay.exe
-          fpc -Twin32 -Pi386 spcplay.dpr -ospcplay.exe || exit /b 0
-
-      - name: If 32-bit failed, build 64-bit
-        shell: cmd
-        run: |
-          cd spcplay.exe
-          if not exist ..\spcplay.exe (
-            fpc -Twin64 -Px86_64 spcplay.dpr -ospcplay.exe || exit /b 1
+          echo "=== Attempting 32-bit build ==="
+          fpc -Twin32 -Pi386 spcplay.dpr -o..\spcplay.exe
+          if exist ..\spcplay.exe (
+            echo [OK] 32-bit build succeeded
+            exit /b 0
           )
+          echo "=== 32-bit failed, trying 64-bit ==="
+          fpc -Twin64 -Px86_64 spcplay.dpr -o..\spcplay.exe
+          cd ..
+          if not exist spcplay.exe (
+            echo [ERROR] Both 32-bit and 64-bit builds failed
+            exit /b 1
+          )
+          echo [OK] 64-bit build succeeded
 
-      - name: List output
+      - name: Verify spcplay.exe exists
         shell: cmd
         run: |
-          dir ..\spcplay.exe || dir spcplay.exe
+          if exist spcplay.exe (
+            echo [OK] spcplay.exe created successfully
+            dir spcplay.exe
+          ) else (
+            echo [ERROR] spcplay.exe not found
+            exit /b 1
+          )
 
       - name: Upload spcplay.exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: spcplay-exe
-          path: |
-            spcplay.exe\spcplay.exe
-            spcplay.exe\spcplay.exe.map
+          path: spcplay.exe
