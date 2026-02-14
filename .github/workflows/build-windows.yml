@@ -39,33 +39,34 @@ jobs:
           Get-Command fpc -All | Format-List -Force
           & cmd /c where fpc || Write-Host 'where fpc returned non-zero'
 
-      - name: Add FPC to PATH and verify
-        shell: pwsh
-        run: |
-          $env:PATH = "C:\lazarus\fpc\3.2.2\bin\i386-win32;C:\lazarus\fpc\3.2.2\bin\x86_64-win64;$env:PATH"
-          Write-Host "PATH includes FPC now"
-          & cmd /c where fpc || Write-Host 'fpc not in PATH yet'
-          & fpc -v
-
-      - name: Build spcplay.exe (32-bit, fallback to 64-bit)
+      - name: Explore Lazarus installation directory
         shell: cmd
         run: |
-          set PATH=C:\lazarus\fpc\3.2.2\bin\i386-win32;C:\lazarus\fpc\3.2.2\bin\x86_64-win64;%PATH%
-          cd spcplay.exe
-          echo "=== Attempting 32-bit build ==="
-          fpc -Twin32 -Pi386 spcplay.dpr -o..\spcplay.exe
-          if exist ..\spcplay.exe (
-            echo [OK] 32-bit build succeeded
-            exit /b 0
-          )
-          echo "=== 32-bit failed, trying 64-bit ==="
-          fpc -Twin64 -Px86_64 spcplay.dpr -o..\spcplay.exe
-          cd ..
-          if not exist spcplay.exe (
-            echo [ERROR] Both 32-bit and 64-bit builds failed
+          echo "=== Checking Lazarus directory structure ==="
+          if exist C:\lazarus (
+            echo Found Lazarus at C:\lazarus
+            dir C:\lazarus
+            echo.
+            echo FPC bin directory:
+            dir C:\lazarus\fpc
+          ) else (
+            echo Lazarus not found at C:\lazarus
             exit /b 1
           )
-          echo [OK] 64-bit build succeeded
+
+      - name: Build spcplay.exe with lazbuild
+        shell: cmd
+        run: |
+          echo "=== Building with lazbuild ==="
+          cd spcplay.exe
+          "C:\lazarus\lazbuild.exe" --build-mode=Release spcplay.dpr -o..\spcplay.exe
+          if exist ..\spcplay.exe (
+            echo [OK] Build succeeded via lazbuild
+            exit /b 0
+          ) else (
+            echo [ERROR] lazbuild failed
+            exit /b 1
+          )
 
       - name: Verify spcplay.exe exists
         shell: cmd
